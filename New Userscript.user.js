@@ -329,9 +329,10 @@ function compute_remaining_time(){
         //Preset value on field
         min = Math.floor(min);
         var field = document.getElementById("build_amount");
-        field.value = min;
-
+        field.setAttribute("placeholder", min);
+        document.activeElement.blur();
     });
+
     var techno_details = document.getElementById("technologydetails_content");
     if(techno_details == null){
         return;
