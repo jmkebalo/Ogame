@@ -178,7 +178,7 @@ function do_action(){
     // Get URL from the list to do
     var url = undefined;
     if(action == EXPEDITION){
-        if(getUrlParameter("position")!=0){
+        if(getUrlParameter("position")==0){
             if(urls !== undefined && urls !== null)
                 url = urls.shift();
             else
