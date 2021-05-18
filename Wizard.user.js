@@ -77,8 +77,6 @@ var DISPATCH = "dispatch";
 var CONFIG_DISPATCH = "config_dispatch";
 var DATA = "data"; //some additional data with conf
 
-var RESOURCES_PRODUCTION = ["metal","crystal","deuterium","energy"];
-
 try{
     var myStorage = localStorage;
 }
@@ -204,8 +202,8 @@ function do_action(){
             if(getUrlParameter("am203")==0){
                 var resources = getResources();
                 var total = 0;
-                for(var i = 0;i<RESOURCES_PRODUCTION.length-1;i++){
-                    if(data[RESOURCES_PRODUCTION[i]] == true)
+                for(var i = 0;i<RESOURCES.length-1;i++){
+                    if(data[RESOURCES[i]] == true)
                         total += parseInt(resources[RESOURCES[i]]);
 
                 }
@@ -225,13 +223,13 @@ function do_action(){
             document.getElementById("continueToFleet2").click();
             document.getElementById("continueToFleet3").click();
 
-            if(data[RESOURCES_PRODUCTION[0]] == true)
+            if(data[RESOURCES[0]] == true)
                 document.getElementById("selectMaxMetal").click()
 
-            if(data[RESOURCES_PRODUCTION[1]] == true)
+            if(data[RESOURCES[1]] == true)
                 document.getElementById("selectMaxCrystal").click()
 
-            if(data[RESOURCES_PRODUCTION[2]] == true)
+            if(data[RESOURCES[2]] == true)
                 document.getElementById("selectMaxDeuterium").click()
 
             //Send manually
@@ -256,14 +254,14 @@ function do_action(){
             document.getElementById("continueToFleet2").click();
             document.getElementById("continueToFleet3").click();
             //Fill resources
-                document.getElementById("selectMaxCrystal").click()
+            document.getElementById("selectMaxCrystal").click()
 
             //Send manually
             return;
         }
     }
     if(action == REFRESH){
-        if(urls !== undefined)
+        if(urls !== undefined && urls !== null)
             url = urls.shift();
         else
             myStorage.removeItem(MYACTION);
@@ -335,13 +333,13 @@ function prepare_action(event){
         var regroup = {};
         var pass = true;
         regroup.coords = data.coords.split(":");
-        for(i = 0;i<RESOURCES_PRODUCTION.length-1;i++){
-            if (confirm("Regrouper le "+ RESOURCES_PRODUCTION[i] + "?")){
-                regroup[RESOURCES_PRODUCTION[i]] = true;
+        for(i = 0;i<RESOURCES.length-1;i++){
+            if (confirm("Regrouper le "+ RESOURCES[i] + "?")){
+                regroup[RESOURCES[i]] = true;
                 pass = false;
             }
             else
-                regroup[RESOURCES_PRODUCTION[i]] = false;
+                regroup[RESOURCES[i]] = false;
         }
         if(pass)
             return;
@@ -364,8 +362,8 @@ function prepare_action(event){
         var dispatch = {};
         var cargo_number = 0;
         //for(i=0;i<RESOURCES.length -1 ;i++){
-            dispatch[RESOURCES[1]] = Math.floor(resources[RESOURCES[1]] /links[0].length)
-            cargo_number += Math.ceil(dispatch[RESOURCES[1]]/CARGO_SIZE )
+        dispatch[RESOURCES[1]] = Math.floor(resources[RESOURCES[1]] /links[0].length)
+        cargo_number += Math.ceil(dispatch[RESOURCES[1]]/CARGO_SIZE )
         //}
 
         for(i=0;i<links[0].length;i++){
@@ -384,7 +382,8 @@ function prepare_action(event){
     }
 
     if(tag == CONFIG_REFRESH){
-        alert("Configuration en cours de travaux");
+        get_total(PRODUCTION,true);
+        get_total("resources",true);
         return;
     }
     if(tag == CONFIG_EXPEDITION){
@@ -522,7 +521,7 @@ function getResources(){
     var result = {};
     for(var i=0;i <RESOURCES.length;i++){
         var quantity = document.getElementById(RESOURCES[i]).textContent;
-        result[RESOURCES[i ]] = removeDot(quantity)
+        result[RESOURCES[i]] = removeDot(quantity)
     }
 
     return result;
@@ -545,8 +544,8 @@ function getProduction(){
     }
 
     var result = {};
-    for(i=0;i<RESOURCES_PRODUCTION.length;i++){
-        result[RESOURCES_PRODUCTION[i]] = prod.shift();
+    for(i=0;i<RESOURCES.length;i++){
+        result[RESOURCES[i]] = prod.shift();
     }
     return result;
 }
@@ -734,9 +733,36 @@ function getChildByClass(parent,className){
     return null;
 }
 
-function get_total(data){
+function get_total(data,pin){
     var links = getPlanetLinks();
+    var metal = 0;
+    var crystal = 0;
+    var deut = 0;
+    var available = "";
     for(var i=0;i<links[0].length;i++){
-        //alert("1-"+links[0][i]);
+        var planet = JSON.parse(myStorage.getItem("1-"+links[0][i]));
+        var info = planet[data];
+        if(available == "")
+            available = planet.name;
+        else
+            available = available + planet.name
+
+        available = available + ";" + info[RESOURCES[0]] + ";" + info[RESOURCES[1]] +";" + info[RESOURCES[2]] +"\n"
+        metal += parseInt(info[RESOURCES[0]]);
+        crystal += parseInt(info[RESOURCES[1]]);
+        deut += parseInt(info[RESOURCES[2]]);
     }
+    if(pin){
+        var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
+        write_clipdboard(total,data)
+    }
+}
+
+
+function write_clipdboard(data,data_name){
+    navigator.clipboard.writeText(data).then(function() {
+        alert(data_name + " on clipboard.\n");
+    }, function() {
+        alert("Fails to write " + data_name + " on clipboard");
+    });
 }
