@@ -199,22 +199,18 @@ function do_action(){
                 myStorage.removeItem(MYACTION);
         }
         else{
-            if(getUrlParameter("am203")==0){
-                var resources = getResources();
-                var total = 0;
-                for(var i = 0;i<RESOURCES.length-1;i++){
-                    if(data[RESOURCES[i]] == true)
-                        total += parseInt(resources[RESOURCES[i]]);
-
-                }
-                var number_cargo = Math.ceil(total/CARGO_SIZE)+5;
-                //var civil = document.getElementById("civil");
-
-                //var input = document.getElementsByName(CARGO_NAME);
-                //input[0].value = number_cargo;
-                location.assign(window.location+"&am203="+number_cargo);
-                return;
+            var resources = getResources();
+            var total = 0;
+            for(var i = 0;i<RESOURCES.length-1;i++){
+                if(data[RESOURCES[i]] == true)
+                    total += parseInt(resources[RESOURCES[i]]);
             }
+            var number_cargo = Math.ceil(total/CARGO_SIZE)+5;
+            
+            var input = document.getElementsByName(CARGO_NAME);
+            input[0].focus(); //Focus on the field
+            input[0].value = number_cargo; //set value
+            document.activeElement.blur(); //remove focus to save the value
 
             if(document.getElementsByName(CARGO_NAME)[0].disabled){
                 alert("No more transporter");
