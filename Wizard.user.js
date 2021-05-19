@@ -179,8 +179,6 @@ function do_action(){
         if(getUrlParameter("position")==0){
             if(urls !== undefined && urls !== null)
                 url = urls.shift();
-            else
-                myStorage.removeItem(MYACTION);
         }
         else{
             document.getElementById("continueToFleet2").click();
@@ -195,31 +193,19 @@ function do_action(){
         if(getUrlParameter("position")==0){
             if(urls !== undefined && urls !== null)
                 url = urls.shift();
-            else
-                myStorage.removeItem(MYACTION);
         }
         else{
-            if(getUrlParameter("am203")==0){
-                var resources = getResources();
-                var total = 0;
-                for(var i = 0;i<RESOURCES.length-1;i++){
-                    if(data[RESOURCES[i]] == true)
-                        total += parseInt(resources[RESOURCES[i]]);
-
-                }
-                var number_cargo = Math.ceil(total/CARGO_SIZE)+5;
-                //var civil = document.getElementById("civil");
-
-                //var input = document.getElementsByName(CARGO_NAME);
-                //input[0].value = number_cargo;
-                location.assign(window.location+"&am203="+number_cargo);
-                return;
+            var resources = getResources();
+            var total = 0;
+            for(var i = 0;i<RESOURCES.length-1;i++){
+                if(data[RESOURCES[i]] == true)
+                    total += parseInt(resources[RESOURCES[i]]);
             }
 
-            if(document.getElementsByName(CARGO_NAME)[0].disabled){
-                alert("No more transporter");
+            var input = document.getElementsByName(CARGO_NAME);
+            write_field(input[0],get_number_cargo(total,5))
+            if(!is_transport_ok())
                 return;
-            }
             document.getElementById("continueToFleet2").click();
             document.getElementById("continueToFleet3").click();
 
@@ -242,19 +228,29 @@ function do_action(){
         if(getUrlParameter("position")==0){
             if(urls !== undefined && urls !== null)
                 url = urls.shift();
-            else
-                myStorage.removeItem(MYACTION);
         }
         else{
-
-            if(document.getElementsByName(CARGO_NAME)[0].disabled){
-                alert("No more transporter");
+            if(!is_transport_ok())
                 return;
-            }
+
             document.getElementById("continueToFleet2").click();
             document.getElementById("continueToFleet3").click();
+
             //Fill resources
-            document.getElementById("selectMaxCrystal").click()
+            var dispatch = data.shift();
+            if(dispatch[RESOURCES[0]] > 0)
+                document.getElementById("selectMaxMetal").click()
+
+            if(dispatch[RESOURCES[1]] > 0)
+                document.getElementById("selectMaxCrystal").click()
+
+            if(dispatch[RESOURCES[2]] > 0 )
+                document.getElementById("selectMaxDeuterium").click()
+
+            //write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
+            //write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
+            //write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
+            myStorage.setItem(DATA, JSON.stringify(data));
 
             //Send manually
             return;
@@ -263,8 +259,11 @@ function do_action(){
     if(action == REFRESH){
         if(urls !== undefined && urls !== null)
             url = urls.shift();
-        else
-            myStorage.removeItem(MYACTION);
+    }
+
+    if(urls === undefined || urls === null){
+        myStorage.removeItem(MYACTION);
+        myStorage.removeItem(DATA);
     }
 
     // Go to the URL
@@ -359,19 +358,41 @@ function prepare_action(event){
     if(tag == DISPATCH){
         data = getPlanetData();
         var resources = getResources();
-        var dispatch = {};
+        var dispatch = [];
         var cargo_number = 0;
-        //for(i=0;i<RESOURCES.length -1 ;i++){
-        dispatch[RESOURCES[1]] = Math.floor(resources[RESOURCES[1]] /links[0].length)
-        cargo_number += Math.ceil(dispatch[RESOURCES[1]]/CARGO_SIZE )
-        //}
+        var total = get_total("resources");
+        pass = true;
+        for(i = 0;i<RESOURCES.length-1;i++){
+            if (confirm("Eparpiller le "+ RESOURCES[i] + "?")){
+                dispatch[RESOURCES[i]] = true;
+                pass = false;
+            }
+            else
+                dispatch[RESOURCES[i]] = false;
+        }
+        if(pass)
+            return;
 
         for(i=0;i<links[0].length;i++){
             if(data.id.split("-")[1] == links[0][i])
                 continue;
+
+            var current = {};
             var target = JSON.parse(myStorage.getItem("1-"+links[0][i]));
+            var total_planet = 0;
+            var amount = 0
+            for(var j = 0;j<RESOURCES.length-1;j++){
+                if(dispatch[RESOURCES[j]])
+                    amount = Math.ceil((parseInt(total[j]) / links[0].length) - target.resources[RESOURCES[j]]);
+                else
+                    amount = 0
+
+                current[RESOURCES[j]] = amount;
+                total_planet += amount
+            }
             var coords = target.coords.split(":");
-            urls.push(createUrl(INGAME,FLEET,"&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=3&am203="+cargo_number))
+            dispatch.push(current);
+            urls.push(createUrl(INGAME,FLEET,"&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=3&am203="+get_number_cargo(total_planet,0)))
         }
         url = urls.shift()
         myStorage.setItem(MYACTION, DISPATCH);
@@ -440,7 +461,11 @@ function add_button(text,id,smallClass,idSmall){
 }
 
 
-
+function write_field(field,data){
+    field.focus(); //Focus on the field
+    field.value = data; //set value
+    document.activeElement.blur(); //remove focus to save the value
+}
 
 
 
@@ -610,7 +635,7 @@ function compute_remaining_time(){
         var max = 0;
         // For Building & Research
         if(type == LEVEL){
-            var all_resources =get_total("resources");
+            var all_resources = get_total("resources");
             var to_do = []
             //Compute remaning resources to get
             for(i=0;i<cost.length;i++){
@@ -704,6 +729,9 @@ function get_type(){
     return type;
 }
 
+function is_transport_ok(){
+    return !document.getElementsByName(CARGO_NAME)[0].disabled;
+}
 /*************************
  * Utilities
  *************************/
@@ -752,13 +780,31 @@ function get_total(data,pin){
         crystal += parseInt(info[RESOURCES[1]]);
         deut += parseInt(info[RESOURCES[2]]);
     }
+    var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
     if(pin){
-        var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
         write_clipdboard(total,data)
     }
+    return [metal,crystal,deut];
 }
 
+function convert_time(hours){
+    var time = "";
+    if(hours > 24){
+        time = time + Math.floor(hours / 24) + "J ";
+        hours = hours % 24;
+    }
+    var min = hours * 60;
+    if(min > 60){
+        time = time + Math.floor(min/60) + "h ";
+        min = min % 60;
+    }
+    time = time + Math.floor(min) + "m";
+    return time;
+}
 
+function get_number_cargo(amount,marge){
+    return Math.ceil(amount/CARGO_SIZE)+marge;
+}
 function write_clipdboard(data,data_name){
     navigator.clipboard.writeText(data).then(function() {
         alert(data_name + " on clipboard.\n");
