@@ -201,6 +201,12 @@ function do_action(){
                 if(data[RESOURCES[i]] == true)
                     total += parseInt(resources[RESOURCES[i]]);
             }
+            var number_cargo = Math.ceil(total/CARGO_SIZE)+5;
+            
+            var input = document.getElementsByName(CARGO_NAME);
+            input[0].focus(); //Focus on the field
+            input[0].value = number_cargo; //set value
+            document.activeElement.blur(); //remove focus to save the value
 
             var input = document.getElementsByName(CARGO_NAME);
             write_field(input[0],get_number_cargo(total,5))
