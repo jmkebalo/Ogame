@@ -75,6 +75,8 @@ var REGROUP = "regroup";
 var CONFIG_REGROUP = "config_regroup";
 var DISPATCH = "dispatch";
 var CONFIG_DISPATCH = "config_dispatch";
+var ACTIVITY = "activity";
+var CONFIG_ACTIVITY = "config_activity";
 var DATA = "data"; //some additional data with conf
 
 try{
@@ -86,14 +88,22 @@ catch{
 }
 
 
+/*************************
+ * MAIN EXECUTION
+ *************************/
 (function() {
     'use strict';
     init();
     do_action(); //do action if any
     compute_remaining_time();
-    //setTimeout(reload, getRandomArbitrary(100000,250000));
+    do_activity();
 })();
 
+
+
+/*************************
+ * MAIN FUNCTIONS
+ *************************/
 
 // first thing to do, every time
 function init(){
@@ -119,14 +129,17 @@ function init(){
     add_button("Regrouper",REGROUP,"menuImage fleet1",CONFIG_REGROUP);
     add_button("Disperse",DISPATCH,"menuImage fleet1",CONFIG_DISPATCH);
     add_button("Recharger",REFRESH,"menuImage station",CONFIG_REFRESH);
+    if(getItem(ACTIVITY))
+        add_button("Activité",ACTIVITY,"menuImage shipyard  ",CONFIG_ACTIVITY,true);
+    else
+        add_button("Activité",ACTIVITY,"menuImage shipyard  ",CONFIG_ACTIVITY);
 
     var current = getPlanetData();
-    var data = myStorage.getItem(current.id)
+    var data = getItem(current.id)
 
     if(data === null)
         data = current;
     else{
-        data = JSON.parse(data);
         data.name = current.name;
         data.coords = current.coords;
     }
@@ -159,270 +172,378 @@ function init(){
         default:
             break;
     }
-    myStorage.setItem(current.id,JSON.stringify(data))
+    setItem(current.id,data)
 }
 
-// if any action remaining, just go
+
+/* prepare_action
+* triggered by the click on script's button
+*/
+function prepare_action(event){
+    var tag = event.currentTarget.toString().split("#")[1];
+    var links = getPlanetLinks();
+    var urls = [];
+    var prep = [];
+    //Run the appropriate preparation
+    switch(tag){
+        case REFRESH:
+            prep = prepare_refresh(links,urls);
+            break;
+        case EXPEDITION:
+            prep = prepare_expedition(links,urls);
+            break;
+        case REGROUP:
+            prep = prepare_regroup(links,urls);
+            break;
+        case DISPATCH:
+            prep = prepare_dispatch(links,urls);
+            break;
+        case ACTIVITY:
+            set_activity();
+            return;
+        case CONFIG_ACTIVITY:
+            config_activity();
+            break;
+        case CONFIG_REFRESH:
+            config_refresh();
+            break;
+        case CONFIG_EXPEDITION:
+            config_expedition();
+            break;
+        case CONFIG_DISPATCH:
+            config_dispatch();
+            break;
+    }
+
+    /* If preparation is OK
+     * prep[0] contains URLS where to go
+     * prep[1] can contain DATA for the action
+     */
+    if(prep[0].length > 0){
+        var url = prep[0].shift()
+        setItem(MYACTION,tag);
+        setItem(tag,prep[0]);
+        if(prep[1] !== undefined)
+            setItem(DATA,prep[1]);
+        location.assign(url)
+    }
+
+}
+
+/* do_action
+* run by default
+* execute the action if MYACTION is set on local storage
+*/
 function do_action(){
 
-    var action = myStorage.getItem(MYACTION);
+    var action = getItem(MYACTION);
     if(action === undefined || action === null)
         return;
 
-    var urls = myStorage.getItem(action);
-    if(urls !== undefined && urls !== null)
-        urls = urls.split(",");
-
-    // Get URL from the list to do
-    var url = undefined;
-    if(action == EXPEDITION){
-        if(getUrlParameter("position")==0){
-            if(urls !== undefined && urls !== null)
-                url = urls.shift();
-        }
-        else{
-            document.getElementById("continueToFleet2").click();
-            document.getElementById("continueToFleet3").click();
-            //Send manually
-            return;
-        }
-    }
-
-    if(action == REGROUP){
-        var data = JSON.parse(myStorage.getItem(DATA));
-        if(getUrlParameter("position")==0){
-            if(urls !== undefined && urls !== null)
-                url = urls.shift();
-        }
-        else{
-            var resources = getResources();
-            var total = 0;
-            for(var i = 0;i<RESOURCES.length-1;i++){
-                if(data[RESOURCES[i]] == true)
-                    total += parseInt(resources[RESOURCES[i]]);
-            }
-            var number_cargo = Math.ceil(total/CARGO_SIZE)+5;
-            
-            var input = document.getElementsByName(CARGO_NAME);
-            input[0].focus(); //Focus on the field
-            input[0].value = number_cargo; //set value
-            document.activeElement.blur(); //remove focus to save the value
-
-            var input = document.getElementsByName(CARGO_NAME);
-            write_field(input[0],get_number_cargo(total,5))
-            if(!is_transport_ok())
-                return;
-            document.getElementById("continueToFleet2").click();
-            document.getElementById("continueToFleet3").click();
-
-            if(data[RESOURCES[0]] == true)
-                document.getElementById("selectMaxMetal").click()
-
-            if(data[RESOURCES[1]] == true)
-                document.getElementById("selectMaxCrystal").click()
-
-            if(data[RESOURCES[2]] == true)
-                document.getElementById("selectMaxDeuterium").click()
-
-            //Send manually
-            return;
-        }
-    }
-
-    if(action == DISPATCH){
-        data = JSON.parse(myStorage.getItem(DATA));
-        if(getUrlParameter("position")==0){
-            if(urls !== undefined && urls !== null)
-                url = urls.shift();
-        }
-        else{
-            if(!is_transport_ok())
-                return;
-
-            document.getElementById("continueToFleet2").click();
-            document.getElementById("continueToFleet3").click();
-
-            //Fill resources
-            var dispatch = data.shift();
-            if(dispatch[RESOURCES[0]] > 0)
-                document.getElementById("selectMaxMetal").click()
-
-            if(dispatch[RESOURCES[1]] > 0)
-                document.getElementById("selectMaxCrystal").click()
-
-            if(dispatch[RESOURCES[2]] > 0 )
-                document.getElementById("selectMaxDeuterium").click()
-
-            //write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
-            //write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
-            //write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
-            myStorage.setItem(DATA, JSON.stringify(data));
-
-            //Send manually
-            return;
-        }
-    }
-    if(action == REFRESH){
-        if(urls !== undefined && urls !== null)
-            url = urls.shift();
-    }
-
-    if(urls === undefined || urls === null){
+    var urls = getItem(action);
+    if(urls == undefined && urls == null){
         myStorage.removeItem(MYACTION);
         myStorage.removeItem(DATA);
     }
+    var do_return = true;
 
-    // Go to the URL
-    if(url !==undefined){
+    switch(action){
+        case EXPEDITION:
+            do_return = do_expedition();
+            break;
+        case REGROUP:
+            do_return = do_regroup();
+            break;
+        case REFRESH:
+            do_return = do_refresh();
+            break;
+        case DISPATCH:
+            do_return = do_dispatch();
+            break;
+    }
+
+    //If action requires a manual action
+    // Like sending fleet, just quit here
+    if(do_return)
+        return;
+
+    if(urls !== undefined && urls !== null){
+        var url = urls.shift();
         // set back the list without the value
         if(urls.length > 0)
-            myStorage.setItem(action, urls);
+            setItem(action, urls);
         else
             myStorage.removeItem(action);
+        // Go to the URL
         location.assign(url);
+    }
+
+}
+
+
+
+
+
+/*************************
+ * EXPEDITION
+ *************************/
+function prepare_expedition(links,urls){
+    var size = prompt("Combien d'expédition?","10");
+    for(var i=0;i<size;i++){
+        //position 16
+        // 20 ship, 4000GT and max éclaireur
+        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&am207=20&am213=20&am211=20&am215=20&am218=20&am203=4000&am219=5000"))
+    }
+    return [urls,undefined];
+}
+
+function do_expedition(){
+    if(getUrlParameter("position")==0)
+        return false;
+
+    document.getElementById("continueToFleet2").click();
+    document.getElementById("continueToFleet3").click();
+    //Send manually
+    return true;
+
+}
+
+function config_expedition(){
+
+}
+/*************************
+ * REGROUP
+ *************************/
+function prepare_regroup(links,urls){
+    var data = getPlanetData();
+    var regroup = {};
+    var pass = true;
+    regroup.coords = data.coords.split(":");
+    for(var i = 0;i<RESOURCES.length-1;i++){
+        if (confirm("Regrouper le "+ RESOURCES[i] + "?")){
+            regroup[RESOURCES[i]] = true;
+            pass = false;
+        }
+        else
+            regroup[RESOURCES[i]] = false;
+    }
+
+    if(pass)
+        return [urls,undefined];
+
+    for(i=0;i<links[0].length;i++){
+        if(data.id.split("-")[1] == links[0][i])
+            continue;
+
+        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&galaxy="+ regroup.coords[0]+"&system="+regroup.coords[1] + "&position=" + regroup.coords[2] +"&type="+ data.type +"&mission=3"))
+    }
+    return [urls,regroup];
+}
+
+function do_regroup(){
+
+    var data = getItem(DATA);
+
+    if(getUrlParameter("position")==0){
+        return false;
+    }
+
+    var resources = getResources();
+    var total = 0;
+    for(var i = 0;i<RESOURCES.length-1;i++){
+        if(data[RESOURCES[i]] == true)
+            total += parseInt(resources[RESOURCES[i]]);
+    }
+
+    var input = document.getElementsByName(CARGO_NAME);
+    write_field(input[0],get_number_cargo(total,5))
+    if(!is_transport_ok())
+        return;
+    document.getElementById("continueToFleet2").click();
+    document.getElementById("continueToFleet3").click();
+
+    if(data[RESOURCES[0]] == true)
+        document.getElementById("selectMaxMetal").click()
+
+    if(data[RESOURCES[1]] == true)
+        document.getElementById("selectMaxCrystal").click()
+
+    if(data[RESOURCES[2]] == true)
+        document.getElementById("selectMaxDeuterium").click()
+
+    //Send manually
+    return true;
+}
+
+function config_regroup(){
+
+}
+/*************************
+ * DISPATCH
+ *************************/
+function prepare_dispatch(links,urls){
+
+    var data = getPlanetData();
+    var resources = getResources();
+    var dispatch = [];
+    var cargo_number = 0;
+    var total = get_total("resources");
+    var pass = true;
+    for(var i = 0;i<RESOURCES.length-1;i++){
+        if (confirm("Eparpiller le "+ RESOURCES[i] + "?")){
+            dispatch[RESOURCES[i]] = true;
+            pass = false;
+        }
+        else
+            dispatch[RESOURCES[i]] = false;
+    }
+    if(pass)
+        return [urls,undefined];
+
+    for(i=0;i<links[0].length;i++){
+        if(data.id.split("-")[1] == links[0][i])
+            continue;
+
+        var current = {};
+        var target = getItem("1-"+links[0][i]);
+        var total_planet = 0;
+        var amount = 0
+        for(var j = 0;j<RESOURCES.length-1;j++){
+            if(dispatch[RESOURCES[j]])
+                amount = Math.ceil((parseInt(total[j]) / links[0].length) - target.resources[RESOURCES[j]]);
+            else
+                amount = 0
+
+            current[RESOURCES[j]] = amount;
+            total_planet += amount
+        }
+        var coords = target.coords.split(":");
+        dispatch.push(current);
+        urls.push(createUrl(INGAME,FLEET,"&cp="+ data.id.split("-")[1] + "&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=3&am203="+get_number_cargo(total_planet,0)))
+    }
+    return [urls,dispatch];
+}
+function do_dispatch(){
+    var data = getItem(DATA);
+    if(getUrlParameter("position")==0)
+        return false;
+
+    if(!is_transport_ok())
+        return false;
+
+    document.getElementById("continueToFleet2").click();
+    document.getElementById("continueToFleet3").click();
+
+    //Fill resources
+    var dispatch = data.shift();
+    if(dispatch[RESOURCES[0]] > 0)
+        document.getElementById("selectMaxMetal").click()
+
+    if(dispatch[RESOURCES[1]] > 0)
+        document.getElementById("selectMaxCrystal").click()
+
+    if(dispatch[RESOURCES[2]] > 0 )
+        document.getElementById("selectMaxDeuterium").click()
+
+    //write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
+    //write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
+    //write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
+    setItem(DATA, data);
+
+    //Send manually
+    return true;
+
+
+}
+
+function config_dispatch(){
+
+}
+/*************************
+ * REFRESH
+ *************************/
+function prepare_refresh(links,urls){
+
+    // Create URL for planet refresh
+    for(var i=0;i<links[0].length;i++){
+        urls.push(createUrl(PRODUCTION,undefined,"cp="+links[0][i]))
+        //     urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[0][i]))
+        //     urls.push(createUrl(INGAME,DEFENSES,"cp="+links[0][i]))
+    }
+    // Create URL for moon refresh
+    for(i=0;i<links[1].length;i++){
+        //       urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[1][i]))
+        //       urls.push(createUrl(INGAME,DEFENSES,"cp="+links[1][i]))
+    }
+
+    if(confirm("Le chargement va naviguer sur " + urls.length + " URLs.")){
+        var url = urls.shift()
+        setItem(MYACTION, REFRESH);
+        setItem(REFRESH, urls);
+        location.assign(url)
+    }
+}
+
+function do_refresh(){
+    // Just return false
+    return false;
+}
+function config_refresh(){
+    get_total(PRODUCTION,true);
+    get_total("resources",true);
+}
+
+/*************************
+ * ACTIVITY
+ *************************/
+function set_activity(){
+    if(getItem(ACTIVITY))
+        setItem(ACTIVITY,false)
+    else
+        setItem(ACTIVITY,true)
+    location.reload();
+}
+
+function do_activity(){
+    if(getItem(ACTIVITY)){
+        var config_activity = getItem(CONFIG_ACTIVITY)
+        if(config_activity ===null)
+            setTimeout(reload, getRandomArbitrary(10000,25000));
+        else
+            setTimeout(reload, getRandomArbitrary(config_activity.min,config_activity.max));
     }
 }
 
 // Just randomly go somewhere inside your empire
 function reload(){
+
+    var config_activity = getItem(CONFIG_ACTIVITY)
     var links = getPlanetLinks();
-    var planetsList = links[0].concat(links[1])
+    var planetsList = [];
+    if(config_activity !==null){
+        if(config_activity.planet)
+            planetsList = planetsList.concat(links[0])
+
+        if(config_activity.moon)
+            planetsList = planetsList.concat(links[1])
+    }
+    if(planetsList.length == 0)
+        planetsList = links[0]
+
     var rand = getRandomArbitrary(0,planetsList.length-1);
     var planet = planetsList[rand];
     location.assign(createUrl(INGAME,OVERVIEW,"cp="+planet));
 }
 
+function config_activity(){
+    var config_activity = {};
+    config_activity.planet = confirm("Générer de l'activité sur les planètes?")
+    config_activity.moon = confirm("Générer de l'activité sur les lunes?")
 
-
-function prepare_action(event){
-    var tag = event.currentTarget.toString().split("#");
-    tag.shift();//Remove URL...
-    var links = getPlanetLinks();
-    var urls = [];
-    if(tag == REFRESH){
-        // Create URL for planet refresh
-        for(var i=0;i<links[0].length;i++){
-            urls.push(createUrl(PRODUCTION,undefined,"cp="+links[0][i]))
-            urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[0][i]))
-            urls.push(createUrl(INGAME,DEFENSES,"cp="+links[0][i]))
-        }
-        // Create URL for moon refresh
-        for(i=0;i<links[1].length;i++){
-            urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[1][i]))
-            urls.push(createUrl(INGAME,DEFENSES,"cp="+links[1][i]))
-        }
-        if(confirm("Le chargement va naviguer sur " + urls.length + " URLs.")){
-            var url = urls.shift()
-            myStorage.setItem(MYACTION, REFRESH);
-            myStorage.setItem(REFRESH, urls);
-            location.assign(url)
-        }
-        return;
-    }
-    if(tag == EXPEDITION){
-        var size = prompt("Combien d'expédition?","10");
-        for(i=0;i<size;i++){
-            //position 16
-            // 20 ship, 4000GT and max éclaireur
-            urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&am207=20&am213=20&am211=20&am215=20&am218=20&am203=4000&am219=5000"))
-        }
-        url = urls.shift()
-        myStorage.setItem(MYACTION, EXPEDITION);
-        myStorage.setItem(EXPEDITION, urls);
-        location.assign(url)
-        return;
-    }
-
-    if(tag == REGROUP){
-        var data = getPlanetData();
-        var regroup = {};
-        var pass = true;
-        regroup.coords = data.coords.split(":");
-        for(i = 0;i<RESOURCES.length-1;i++){
-            if (confirm("Regrouper le "+ RESOURCES[i] + "?")){
-                regroup[RESOURCES[i]] = true;
-                pass = false;
-            }
-            else
-                regroup[RESOURCES[i]] = false;
-        }
-        if(pass)
-            return;
-        for(i=0;i<links[0].length;i++){
-            if(data.id.split("-")[1] == links[0][i])
-                continue;
-
-            urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&galaxy="+ regroup.coords[0]+"&system="+regroup.coords[1] + "&position=" + regroup.coords[2] +"&type="+ data.type +"&mission=3"))
-        }
-        url = urls.shift()
-        myStorage.setItem(MYACTION, REGROUP);
-        myStorage.setItem(REGROUP, urls);
-        myStorage.setItem(DATA, JSON.stringify(regroup));
-        location.assign(url)
-        return;
-    }
-    if(tag == DISPATCH){
-        data = getPlanetData();
-        var resources = getResources();
-        var dispatch = [];
-        var cargo_number = 0;
-        var total = get_total("resources");
-        pass = true;
-        for(i = 0;i<RESOURCES.length-1;i++){
-            if (confirm("Eparpiller le "+ RESOURCES[i] + "?")){
-                dispatch[RESOURCES[i]] = true;
-                pass = false;
-            }
-            else
-                dispatch[RESOURCES[i]] = false;
-        }
-        if(pass)
-            return;
-
-        for(i=0;i<links[0].length;i++){
-            if(data.id.split("-")[1] == links[0][i])
-                continue;
-
-            var current = {};
-            var target = JSON.parse(myStorage.getItem("1-"+links[0][i]));
-            var total_planet = 0;
-            var amount = 0
-            for(var j = 0;j<RESOURCES.length-1;j++){
-                if(dispatch[RESOURCES[j]])
-                    amount = Math.ceil((parseInt(total[j]) / links[0].length) - target.resources[RESOURCES[j]]);
-                else
-                    amount = 0
-
-                current[RESOURCES[j]] = amount;
-                total_planet += amount
-            }
-            var coords = target.coords.split(":");
-            dispatch.push(current);
-            urls.push(createUrl(INGAME,FLEET,"&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=3&am203="+get_number_cargo(total_planet,0)))
-        }
-        url = urls.shift()
-        myStorage.setItem(MYACTION, DISPATCH);
-        myStorage.setItem(DISPATCH, urls);
-        myStorage.setItem(DATA, JSON.stringify(dispatch));
-        location.assign(url)
-        return;
-    }
-
-    if(tag == CONFIG_REFRESH){
-        get_total(PRODUCTION,true);
-        get_total("resources",true);
-        return;
-    }
-    if(tag == CONFIG_EXPEDITION){
-        alert("Configuration en cours de travaux");
-        return;
-    }
-    if(tag == CONFIG_DISPATCH){
-        alert("Configuration en cours de travaux");
-        return;
-    }
+    config_activity.min = prompt("Délai minimum? (en seconde)","10") * 1000
+    config_activity.max = prompt("Délai maximum? (en seconde)","25") * 1000
+    setItem(CONFIG_ACTIVITY,config_activity)
 }
-
 
 /*************************
  * URL/HTML Writers
@@ -434,7 +555,7 @@ function createUrl(page,component,other){
 
 }
 
-function add_button(text,id,smallClass,idSmall){
+function add_button(text,id,smallClass,idSmall,activate){
     var ul = document.getElementById("menuTable");
     var li = document.createElement("li");
     var span = document.createElement("span");
@@ -453,7 +574,10 @@ function add_button(text,id,smallClass,idSmall){
 
     //Big button
     a = document.createElement("a");
-    a.className = "menubutton";
+    if(activate)
+        a.className = "menubutton  selected";
+    else
+        a.className = "menubutton";
     a.href = "#" + id;
     a.addEventListener ("click", prepare_action , false);
 
@@ -774,7 +898,7 @@ function get_total(data,pin){
     var deut = 0;
     var available = "";
     for(var i=0;i<links[0].length;i++){
-        var planet = JSON.parse(myStorage.getItem("1-"+links[0][i]));
+        var planet = getItem("1-"+links[0][i]);
         var info = planet[data];
         if(available == "")
             available = planet.name;
@@ -811,10 +935,18 @@ function convert_time(hours){
 function get_number_cargo(amount,marge){
     return Math.ceil(amount/CARGO_SIZE)+marge;
 }
+
 function write_clipdboard(data,data_name){
     navigator.clipboard.writeText(data).then(function() {
         alert(data_name + " on clipboard.\n");
     }, function() {
         alert("Fails to write " + data_name + " on clipboard");
     });
+}
+
+function getItem(item){
+    return JSON.parse(myStorage.getItem(item));
+}
+function setItem(item,data){
+    myStorage.setItem(item,JSON.stringify(data));
 }
