@@ -17,7 +17,7 @@
 
 
 var CARGO_SIZE = 40000;
-var CARGO_NAME = "transporterLarge";
+var CARGO_NAME = "transporterSmall";//transporterLarge or transporterSmall
 
 /********************************************************
  ********************************************************
@@ -241,10 +241,6 @@ function do_action(){
         return;
 
     var urls = getItem(action);
-    if(urls == undefined && urls == null){
-        myStorage.removeItem(MYACTION);
-        myStorage.removeItem(DATA);
-    }
     var do_return = true;
 
     switch(action){
@@ -267,7 +263,11 @@ function do_action(){
     if(do_return)
         return;
 
-    if(urls !== undefined && urls !== null){
+    if(urls == undefined && urls == null){
+        myStorage.removeItem(MYACTION);
+        myStorage.removeItem(DATA);
+    }
+    else{
         var url = urls.shift();
         // set back the list without the value
         if(urls.length > 0)
@@ -292,7 +292,7 @@ function prepare_expedition(links,urls){
     for(var i=0;i<size;i++){
         //position 16
         // 20 ship, 4000GT and max éclaireur
-        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&am207=20&am213=20&am211=20&am215=20&am218=20&am203=4000&am219=5000"))
+        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am207=20&am213=20&am211=20&am215=20&am218=20&am203=4000&am219=5000"))
     }
     return [urls,undefined];
 }
@@ -476,12 +476,10 @@ function prepare_refresh(links,urls){
         //       urls.push(createUrl(INGAME,DEFENSES,"cp="+links[1][i]))
     }
 
-    if(confirm("Le chargement va naviguer sur " + urls.length + " URLs.")){
-        var url = urls.shift()
-        setItem(MYACTION, REFRESH);
-        setItem(REFRESH, urls);
-        location.assign(url)
-    }
+    if(confirm("Le chargement va naviguer sur " + urls.length + " URLs."))
+        return [urls,undefined];
+    else
+        return [[],undefined];
 }
 
 function do_refresh(){
