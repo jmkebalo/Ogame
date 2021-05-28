@@ -16,8 +16,8 @@
 // ==/UserScript==
 
 
-var CARGO_SIZE = 40000;
-var CARGO_NAME = "transporterSmall";//transporterLarge or transporterSmall
+var CARGO_SIZE = 40000; // 40000 or 8000
+var CARGO_NAME = "transporterLarge";//transporterLarge or transporterSmall
 
 /********************************************************
  ********************************************************
@@ -34,7 +34,10 @@ var PLANETS = "planetList";
 
 var PAGE = "page"; //For majority of page, it's ingame...
 var INGAME = "ingame";
-var PRODUCTION = "resourceSettings"; // ... But sometime not
+// ... But sometime not
+var CHAT = "chat"; //Chat with other players
+var MESSAGES = "messages" //message from game
+var PRODUCTION = "resourceSettings"; //resources production
 
 var COMPONENT = "component"; //for Ingame pages, additionnal parameter to know the page
 var OVERVIEW = "overview";
@@ -66,7 +69,6 @@ var defense =["rocketLauncher","laserCannonLight","laserCannonHeavy","gaussCanno
 
 //Script variables
 var MYACTION = "myaction";
-var CURRENT_PLANET = "current_planet";
 var EXPEDITION = "expedition"
 var CONFIG_EXPEDITION = "config_expe";
 var REFRESH = "refresh";
@@ -96,7 +98,8 @@ catch{
     init();
     do_action(); //do action if any
     compute_remaining_time();
-    do_activity();
+    if(getUrlParameter(PAGE) !== CHAT)
+        do_activity();
 })();
 
 
@@ -292,7 +295,7 @@ function prepare_expedition(links,urls){
     for(var i=0;i<size;i++){
         //position 16
         // 20 ship, 4000GT and max éclaireur
-        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am207=20&am213=20&am211=20&am215=20&am218=20&am203=4000&am219=5000"))
+        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am207=20&am213=20&am211=20&am215=20&am218=20&am203=2000&am219=5000"))
     }
     return [urls,undefined];
 }
