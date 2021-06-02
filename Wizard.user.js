@@ -67,6 +67,18 @@ var civil = ["transporterSmall","transporterLarge","colonyShip",
 var defense =["rocketLauncher","laserCannonLight","laserCannonHeavy","gaussCannon","ionCannon","plasmaCannon",
               "shieldDomeSmall","shieldDomeLarge","missileInterceptor","missileInterplanetary"];
 
+var MISSIONS = {attack:"1",
+                grouped_attack:"2",
+                transport:"3",
+                station:"4",
+                station_allied:"5",
+                spy:"6",
+                colo:"7",
+                recycle:"8",
+                moon_break:"9",
+                expedition:"15"};
+
+
 //Script variables
 var MYACTION = "myaction";
 var EXPEDITION = "expedition"
@@ -80,6 +92,8 @@ var CONFIG_DISPATCH = "config_dispatch";
 var ACTIVITY = "activity";
 var CONFIG_ACTIVITY = "config_activity";
 var DATA = "data"; //some additional data with conf
+
+var FLEET_CONTENT = "fleet_content";
 
 try{
     var myStorage = localStorage;
@@ -176,6 +190,8 @@ function init(){
             break;
     }
     setItem(current.id,data)
+
+    test();
 }
 
 
@@ -295,7 +311,7 @@ function prepare_expedition(links,urls){
     for(var i=0;i<size;i++){
         //position 16
         // 20 ship, 4000GT and max éclaireur
-        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am207=20&am213=20&am211=20&am215=20&am218=20&am203=2000&am219=5000"))
+        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am218=100&am203=2000&am219=1000"))
     }
     return [urls,undefined];
 }
@@ -422,7 +438,7 @@ function prepare_dispatch(links,urls){
         }
         var coords = target.coords.split(":");
         dispatch.push(current);
-        urls.push(createUrl(INGAME,FLEET,"&cp="+ data.id.split("-")[1] + "&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=3&am203="+get_number_cargo(total_planet,0)))
+        urls.push(createUrl(INGAME,FLEET,"&cp="+ data.id.split("-")[1] + "&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=" + MISSIONS.transport + "&am203="+get_number_cargo(total_planet,0)))
     }
     return [urls,dispatch];
 }
@@ -863,6 +879,55 @@ function get_type(){
 function is_transport_ok(){
     return !document.getElementsByName(CARGO_NAME)[0].disabled;
 }
+
+function get_fleet_content(){
+    var fleets = document.getElementById("eventContent");
+    var metal = 0;
+    var cristal = 0;
+    var deut = 0;
+    for(var i = 0;i<fleets.rows.length;i++){
+        var reserve = null;
+        var fleet = fleets.rows[i];
+        var returning = fleet.getAttribute("data-return-flight");
+        switch(fleet.getAttribute("data-mission-type")){
+            case MISSIONS.transport:
+                //In case of transport
+                //get data once
+                //break;
+                //Just fall down to the next case
+            case MISSIONS.station:
+                //get data from the only event
+                if(returning != "true"){
+                    reserve = getChildByClass(fleet,"icon_movement");
+                }
+                break;
+            case MISSIONS.expedition:
+                //get data from return of the fleet
+                //break;
+                //Just fall down to the next case
+            case MISSIONS.recycle:
+                //get data from return of the fleet
+                if(returning == "true")
+                    reserve = getChildByClass(fleet,"icon_movement_reserve");
+                break;
+        }
+        if(reserve == null)
+            continue;
+        // Some ugly process of the pop-up
+        // which is a HTML as text
+        var pop = getChildByClass(reserve,"tooltip").title;
+        var values = pop.split('class="value">');
+        metal += parse_value_from_fleet(values[values.length-3].split("<")[0])
+        cristal += parse_value_from_fleet(values[values.length-2].split("<")[0])
+        deut += parse_value_from_fleet(values[values.length-1].split("<")[0])
+    }
+    var fleet_content = {}
+    fleet_content[RESOURCES[0]] = metal;
+    fleet_content[RESOURCES[1]] = cristal;
+    fleet_content[RESOURCES[2]] = deut;
+    setItem(FLEET_CONTENT,fleet_content)
+}
+
 /*************************
  * Utilities
  *************************/
@@ -911,6 +976,15 @@ function get_total(data,pin){
         crystal += parseInt(info[RESOURCES[1]]);
         deut += parseInt(info[RESOURCES[2]]);
     }
+    //Add fleet content to the Total of owned resources
+    if(data == "resources"){
+        var fleet_content = getItem(FLEET_CONTENT)
+        available = available + "Flotte;" + fleet_content[RESOURCES[0]] + ";" + fleet_content[RESOURCES[1]] +";" + fleet_content[RESOURCES[2]] +"\n"
+        metal += parseInt(fleet_content[RESOURCES[0]]);
+        crystal += parseInt(fleet_content[RESOURCES[1]]);
+        deut += parseInt(fleet_content[RESOURCES[2]]);
+    }
+    //Total
     var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
     if(pin){
         write_clipdboard(total,data)
@@ -950,4 +1024,11 @@ function getItem(item){
 }
 function setItem(item,data){
     myStorage.setItem(item,JSON.stringify(data));
+}
+
+function parse_value_from_fleet(text){
+    return parseInt(text.replaceAll(".",""));
+}
+function test(){
+    get_fleet_content();
 }
