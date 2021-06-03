@@ -805,11 +805,10 @@ function compute_remaining_time(){
         }
 
         //For Shipyard & Defenses
-        var resources = getResources().split(";");//convert to array
-        resources.shift();//remove label
+        var resources = getResources();
         //Get minimal production possible right now
         for(i=0;i<cost.length;i++){
-            current_min = resources[i]/cost[i];
+            current_min = resources[RESOURCES[i]]/cost[i];
             if(current_min < min){
                 min = current_min;
             }
@@ -916,10 +915,11 @@ function get_fleet_content(){
         // Some ugly process of the pop-up
         // which is a HTML as text
         var pop = getChildByClass(reserve,"tooltip").title;
-        var values = pop.split('class="value">');
-        metal += parse_value_from_fleet(values[values.length-3].split("<")[0])
-        cristal += parse_value_from_fleet(values[values.length-2].split("<")[0])
-        deut += parse_value_from_fleet(values[values.length-1].split("<")[0])
+        var values = pop.split('class="value">')
+
+        metal += parse_value_from_fleet(values[values.length-3])
+        cristal += parse_value_from_fleet(values[values.length-2])
+        deut += parse_value_from_fleet(values[values.length-1])
     }
     var fleet_content = {}
     fleet_content[RESOURCES[0]] = metal;
@@ -1027,7 +1027,9 @@ function setItem(item,data){
 }
 
 function parse_value_from_fleet(text){
-    return parseInt(text.replaceAll(".",""));
+    if(text == undefined)
+        return 0;
+    return parseInt(text.split("<")[0].replaceAll(".",""));
 }
 function test(){
     get_fleet_content();
