@@ -375,7 +375,7 @@ function do_regroup(){
     }
 
     var input = document.getElementsByName(CARGO_NAME);
-    write_field(input[0],get_number_cargo(total,5))
+    write_field(input[0],get_number_cargo(total,1))
     if(!is_transport_ok())
         return;
     document.getElementById("continueToFleet2").click();
@@ -443,7 +443,6 @@ function prepare_dispatch(links,urls){
     return [urls,dispatch];
 }
 function do_dispatch(){
-    var data = getItem(DATA);
     if(getUrlParameter("position")==0)
         return false;
 
@@ -454,20 +453,15 @@ function do_dispatch(){
     document.getElementById("continueToFleet3").click();
 
     //Fill resources
-    var dispatch = data.shift();
-    if(dispatch[RESOURCES[0]] > 0)
-        document.getElementById("selectMaxMetal").click()
-
-    if(dispatch[RESOURCES[1]] > 0)
-        document.getElementById("selectMaxCrystal").click()
-
-    if(dispatch[RESOURCES[2]] > 0 )
-        document.getElementById("selectMaxDeuterium").click()
-
-    //write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
-    //write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
-    //write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
-    setItem(DATA, data);
+    // Inside setTimeout so the page is "refresh" after click
+    setTimeout( function() {
+        var data = getItem(DATA);
+        var dispatch = data.shift();
+        write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
+        write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
+        write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
+        setItem(DATA, data);
+    }, 100);
 
     //Send manually
     return true;
