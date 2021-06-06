@@ -238,7 +238,7 @@ function prepare_action(event){
      * prep[0] contains URLS where to go
      * prep[1] can contain DATA for the action
      */
-    if(prep[0].length > 0){
+    if(prep.length > 0 && prep[0].length > 0){
         var url = prep[0].shift()
         setItem(MYACTION,tag);
         setItem(tag,prep[0]);
@@ -909,11 +909,12 @@ function get_fleet_content(){
         // Some ugly process of the pop-up
         // which is a HTML as text
         var pop = getChildByClass(reserve,"tooltip").title;
-        var values = pop.split('class="value">')
-
-        metal += parse_value_from_fleet(values[values.length-3])
-        cristal += parse_value_from_fleet(values[values.length-2])
-        deut += parse_value_from_fleet(values[values.length-1])
+        if(pop.includes("Métal")){
+            var values = pop.split('class="value">')
+            metal += parse_value_from_fleet(values[values.length-3])
+            cristal += parse_value_from_fleet(values[values.length-2])
+            deut += parse_value_from_fleet(values[values.length-1])
+        }
     }
     var fleet_content = {}
     fleet_content[RESOURCES[0]] = metal;
