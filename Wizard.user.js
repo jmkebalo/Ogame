@@ -127,7 +127,7 @@ function init(){
 
     // Check for on-going Attack
     var div = document.getElementById("attack_alert");
-    if(div.className != "tooltip noAttack"){
+    if(div.className.includes(" Attack")){
         play()
     }
 
@@ -163,6 +163,7 @@ function init(){
 
     //Depending on current page, do stuff
     data.resources = getResources();
+    get_fleet_content();
     switch(getUrlParameter(PAGE)){
         case PRODUCTION:
             //On production tab
@@ -321,7 +322,9 @@ function do_expedition(){
         return false;
 
     document.getElementById("continueToFleet2").click();
-    document.getElementById("continueToFleet3").click();
+    setTimeout( function() {
+        document.getElementById("continueToFleet3").click();
+    }, 500);
     //Send manually
     return true;
 
@@ -379,16 +382,20 @@ function do_regroup(){
     if(!is_transport_ok())
         return;
     document.getElementById("continueToFleet2").click();
-    document.getElementById("continueToFleet3").click();
 
-    if(data[RESOURCES[0]] == true)
-        document.getElementById("selectMaxMetal").click()
+    setTimeout( function() {
+        var data = getItem(DATA);
+        document.getElementById("continueToFleet3").click();
+        if(data[RESOURCES[0]] == true)
+            document.getElementById("selectMaxMetal").click()
 
-    if(data[RESOURCES[1]] == true)
-        document.getElementById("selectMaxCrystal").click()
+        if(data[RESOURCES[1]] == true)
+            document.getElementById("selectMaxCrystal").click()
 
-    if(data[RESOURCES[2]] == true)
-        document.getElementById("selectMaxDeuterium").click()
+        if(data[RESOURCES[2]] == true)
+            document.getElementById("selectMaxDeuterium").click()
+    }, 500);
+
 
     //Send manually
     return true;
@@ -450,18 +457,20 @@ function do_dispatch(){
         return false;
 
     document.getElementById("continueToFleet2").click();
-    document.getElementById("continueToFleet3").click();
-
-    //Fill resources
-    // Inside setTimeout so the page is "refresh" after click
     setTimeout( function() {
-        var data = getItem(DATA);
-        var dispatch = data.shift();
-        write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
-        write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
-        write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
-        setItem(DATA, data);
-    }, 100);
+        document.getElementById("continueToFleet3").click();
+
+        //Fill resources
+        // Inside setTimeout so the page is "refresh" after click
+        setTimeout( function() {
+            var data = getItem(DATA);
+            var dispatch = data.shift();
+            write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
+            write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
+            write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
+            setItem(DATA, data);
+        }, 500);
+    }, 500);
 
     //Send manually
     return true;
@@ -1026,6 +1035,8 @@ function parse_value_from_fleet(text){
         return 0;
     return parseInt(text.split("<")[0].replaceAll(".",""));
 }
+
+
 function test(){
-    get_fleet_content();
+    return;
 }
