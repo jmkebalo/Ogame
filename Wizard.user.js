@@ -16,7 +16,7 @@
 // ==/UserScript==
 
 
-var CARGO_SIZE = 40000; // 40000 or 8000
+var CARGO_SIZE = 41250; // 41250 or 8250
 var CARGO_NAME = "transporterLarge";//transporterLarge or transporterSmall
 
 /********************************************************
@@ -53,7 +53,7 @@ var LEVEL = "level"; // Class for building/techno, with a level
 var TO_REMOVE = ["advicebarcomponent","mmonetbar",
                  "pagefoldtarget","siteHeader",
                  "notifyTB","ie_message",
-                 "initial_welcome_dialog","commandercomponent"];
+                 "initial_welcome_dialog","commandercomponent","banner_skyscraper"];
 
 var techno = ["technologies_battle","technologies_civil"];
 //Battle fleet
@@ -322,9 +322,6 @@ function do_expedition(){
         return false;
 
     document.getElementById("continueToFleet2").click();
-    setTimeout( function() {
-        document.getElementById("continueToFleet3").click();
-    }, 500);
     //Send manually
     return true;
 
@@ -383,18 +380,14 @@ function do_regroup(){
         return;
     document.getElementById("continueToFleet2").click();
 
-    setTimeout( function() {
-        var data = getItem(DATA);
-        document.getElementById("continueToFleet3").click();
-        if(data[RESOURCES[0]] == true)
-            document.getElementById("selectMaxMetal").click()
+    if(data[RESOURCES[0]] == true)
+        document.getElementById("selectMaxMetal").click()
 
-        if(data[RESOURCES[1]] == true)
-            document.getElementById("selectMaxCrystal").click()
+    if(data[RESOURCES[1]] == true)
+        document.getElementById("selectMaxCrystal").click()
 
-        if(data[RESOURCES[2]] == true)
-            document.getElementById("selectMaxDeuterium").click()
-    }, 500);
+    if(data[RESOURCES[2]] == true)
+        document.getElementById("selectMaxDeuterium").click()
 
 
     //Send manually
@@ -648,19 +641,19 @@ function getPlanetData(){
     var planetsList = document.getElementById(PLANETS);
     var planet = getChildByClass(planetsList,"hightlightPlanet");
     var data = {}
-    var type = 0
+
     if(planet){
-        type = 1;
+        data.type = 1;
     }
     else{
         planet = getChildByClass(planetsList,"hightlightMoon");
-        type = 3;
+        data.type = 3;
     }
     var a = getChildByClass(planet,"planetlink");
     var planetName = getChildByClass(a,"planet-name");
     var planetKoords = getChildByClass(a,"planet-koords");
 
-    data.id = type + "-" + planet.id.split("-")[1];
+    data.id = data.type + "-" + planet.id.split("-")[1];
     data.name = planetName.textContent;
     data.coords = planetKoords.textContent.substring(1).split("]")[0];
 
@@ -989,10 +982,10 @@ function get_total(data,pin){
         deut += parseInt(fleet_content[RESOURCES[2]]);
     }
     //Total
-    var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
     if(pin){
-        write_clipdboard(total,data)
+        write_clipdboard(available,data)
     }
+    var total = "Total;" + metal + ";" + crystal + ";" + deut + "\n"+ available;
     return [metal,crystal,deut];
 }
 
