@@ -16,7 +16,7 @@
 // ==/UserScript==
 
 
-var CARGO_SIZE = 41250; // 41250 or 8250
+var CARGO_SIZE = 42055; // 41250 or 8250
 var CARGO_NAME = "transporterLarge";//transporterLarge or transporterSmall
 
 /********************************************************
@@ -37,7 +37,7 @@ var INGAME = "ingame";
 // ... But sometime not
 var CHAT = "chat"; //Chat with other players
 var MESSAGES = "messages" //message from game
-var PRODUCTION = "resourceSettings"; //resources production
+var EMPIRE = "empire"
 
 var COMPONENT = "component"; //for Ingame pages, additionnal parameter to know the page
 var OVERVIEW = "overview";
@@ -46,6 +46,7 @@ var RESEARCH = "research";
 var SHIPYARD = "shipyard";
 var DEFENSES = "defenses";
 var FLEET = "fleetdispatch";
+var PRODUCTION = "resourcesettings"; //resources production
 
 var NUMBERS = "amount"; // Class for defenses/shipyard, with "number" of elements
 var LEVEL = "level"; // Class for building/techno, with a level
@@ -164,35 +165,29 @@ function init(){
     //Depending on current page, do stuff
     data.resources = getResources();
     get_fleet_content();
-    switch(getUrlParameter(PAGE)){
+
+
+    switch(getUrlParameter(COMPONENT)){
         case PRODUCTION:
-            //On production tab
-            // Retrieve production of the planet
             data[PRODUCTION] = getProduction();
             break;
-        case INGAME:
-            switch(getUrlParameter(COMPONENT)){
-                case SHIPYARD:
-                    //Retrieve fleet of the planet
-                    data[SHIPYARD] = getFleet();
-                    break;
-                case DEFENSES:
-                    //Retrieve defenses of the planet
-                    data[DEFENSES] = getDefense();
-                    break;
-                case FLEET:
-                    //add button for some preset
-                    break;
-                default:
-                    break;
-            }
+        case SHIPYARD:
+            //Retrieve fleet of the planet
+            data[SHIPYARD] = getFleet();
+            break;
+        case DEFENSES:
+            //Retrieve defenses of the planet
+            data[DEFENSES] = getDefense();
+            break;
+        case FLEET:
+            //add button for some preset
             break;
         default:
             break;
     }
+
     setItem(current.id,data)
 
-    test();
 }
 
 
@@ -204,6 +199,8 @@ function prepare_action(event){
     var links = getPlanetLinks();
     var urls = [];
     var prep = [];
+
+    get_fleet_content();
     //Run the appropriate preparation
     switch(tag){
         case REFRESH:
@@ -312,7 +309,7 @@ function prepare_expedition(links,urls){
     for(var i=0;i<size;i++){
         //position 16
         // 20 ship, 4000GT and max éclaireur
-        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&position=16&mission=15&am218=100&am203=2000&am219=1000"))
+        urls.push(createUrl(FLEET,"cp="+links[0][i]+"&position=16&mission=15&am218=100&am203=2000&am219=1000"))
     }
     return [urls,undefined];
 }
@@ -354,7 +351,7 @@ function prepare_regroup(links,urls){
         if(data.id.split("-")[1] == links[0][i])
             continue;
 
-        urls.push(createUrl(INGAME,FLEET,"cp="+links[0][i]+"&galaxy="+ regroup.coords[0]+"&system="+regroup.coords[1] + "&position=" + regroup.coords[2] +"&type="+ data.type +"&mission=3"))
+        urls.push(createUrl(FLEET,"cp="+links[0][i]+"&galaxy="+ regroup.coords[0]+"&system="+regroup.coords[1] + "&position=" + regroup.coords[2] +"&type="+ data.type +"&mission=3"))
     }
     return [urls,regroup];
 }
@@ -438,7 +435,7 @@ function prepare_dispatch(links,urls){
         }
         var coords = target.coords.split(":");
         dispatch.push(current);
-        urls.push(createUrl(INGAME,FLEET,"&cp="+ data.id.split("-")[1] + "&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=" + MISSIONS.transport + "&am203="+get_number_cargo(total_planet,0)))
+        urls.push(createUrl(FLEET,"&cp="+ data.id.split("-")[1] + "&galaxy="+ coords[0]+"&system="+coords[1] + "&position=" + coords[2] +"&type="+ data.type +"&mission=" + MISSIONS.transport + "&am203="+get_number_cargo(total_planet,0)))
     }
     return [urls,dispatch];
 }
@@ -448,21 +445,21 @@ function do_dispatch(){
 
     if(!is_transport_ok())
         return false;
-
+    //document.getElementById("fleet2").removeAttribute("style");
     document.getElementById("continueToFleet2").click();
     setTimeout( function() {
-        document.getElementById("continueToFleet3").click();
+       // document.getElementById("continueToFleet3").click();
 
         //Fill resources
         // Inside setTimeout so the page is "refresh" after click
-        setTimeout( function() {
+      //  setTimeout( function() {
             var data = getItem(DATA);
             var dispatch = data.shift();
             write_field(document.getElementById("metal"),dispatch[RESOURCES[0]])
             write_field(document.getElementById("crystal"),dispatch[RESOURCES[1]])
             write_field(document.getElementById("deuterium"),dispatch[RESOURCES[2]])
             setItem(DATA, data);
-        }, 500);
+       // }, 500);
     }, 500);
 
     //Send manually
@@ -481,14 +478,14 @@ function prepare_refresh(links,urls){
 
     // Create URL for planet refresh
     for(var i=0;i<links[0].length;i++){
-        urls.push(createUrl(PRODUCTION,undefined,"cp="+links[0][i]))
-        //     urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[0][i]))
-        //     urls.push(createUrl(INGAME,DEFENSES,"cp="+links[0][i]))
+        urls.push(createUrl(PRODUCTION,"cp="+links[0][i]))
+        //     urls.push(createUrl(SHIPYARD,"cp="+links[0][i]))
+        //     urls.push(createUrl(DEFENSES,"cp="+links[0][i]))
     }
     // Create URL for moon refresh
     for(i=0;i<links[1].length;i++){
-        //       urls.push(createUrl(INGAME,SHIPYARD,"cp="+links[1][i]))
-        //       urls.push(createUrl(INGAME,DEFENSES,"cp="+links[1][i]))
+        //       urls.push(createUrl(SHIPYARD,"cp="+links[1][i]))
+        //       urls.push(createUrl(DEFENSES,"cp="+links[1][i]))
     }
 
     if(confirm("Le chargement va naviguer sur " + urls.length + " URLs."))
@@ -545,7 +542,7 @@ function reload(){
 
     var rand = getRandomArbitrary(0,planetsList.length-1);
     var planet = planetsList[rand];
-    location.assign(createUrl(INGAME,OVERVIEW,"cp="+planet));
+    location.assign(createUrl(OVERVIEW,"cp="+planet));
 }
 
 function config_activity(){
@@ -561,10 +558,8 @@ function config_activity(){
 /*************************
  * URL/HTML Writers
  *************************/
-function createUrl(page,component,other){
-    if(component === undefined)
-        return window.location.protocol + "//" + window.location.host + window.location.pathname + "?page=" + page + "&" + other;
-    return window.location.protocol + "//" + window.location.host + window.location.pathname + "?page=" + page + "&component=" + component + "&" + other;
+function createUrl(component,other){
+    return window.location.protocol + "//" + window.location.host + window.location.pathname + "?page=" + INGAME + "&component=" + component + "&" + other;
 
 }
 
@@ -605,11 +600,15 @@ function add_button(text,id,smallClass,idSmall,activate){
 
 
 function write_field(field,data){
+    if (data === 0){
+        return
+    }
     field.focus(); //Focus on the field
-    field.value = data; //set value
+    field.value = data.toString(); //set value
     document.activeElement.blur(); //remove focus to save the value
-}
+    //TODO: how to save value? blur doesn't work, emulate keystroke neither...
 
+}
 
 
 /*************************
@@ -688,8 +687,8 @@ function getPlanetLinks(){
 function getResources(){
     var result = {};
     for(var i=0;i <RESOURCES.length;i++){
-        var quantity = document.getElementById(RESOURCES[i]).textContent;
-        result[RESOURCES[i]] = removeDot(quantity)
+        var quantity = document.getElementById(RESOURCES[i]).getAttribute("data-raw");
+        result[RESOURCES[i]] = quantity
     }
 
     return result;
@@ -800,6 +799,7 @@ function compute_remaining_time(){
             return; //Avoid big Else...
         }
 
+/* Old, where Empire was not set free
         //For Shipyard & Defenses
         var resources = getResources();
         //Get minimal production possible right now
@@ -814,6 +814,7 @@ function compute_remaining_time(){
         var field = document.getElementById("build_amount");
         field.setAttribute("placeholder", min);
         document.activeElement.blur();
+        */
     });
 
     var techno_details = document.getElementById("technologydetails_content");
@@ -876,13 +877,20 @@ function is_transport_ok(){
 }
 
 function get_fleet_content(){
-    var fleets = document.getElementById("eventContent");
+    var fleetEvents = document.getElementById("eventContent");
     var metal = 0;
     var cristal = 0;
     var deut = 0;
-    for(var i = 0;i<fleets.rows.length;i++){
+
+    if (fleetEvents === null){
+        return
+    }
+
+    var fleets = fleetEvents.getElementsByClassName("eventFleet"); // Sélection des lignes de la flotte
+
+    for(var i = 0;i<fleets.length;i++){
         var reserve = null;
-        var fleet = fleets.rows[i];
+        var fleet = fleets[i];
         var returning = fleet.getAttribute("data-return-flight");
         switch(fleet.getAttribute("data-mission-type")){
             case MISSIONS.transport:
@@ -893,7 +901,8 @@ function get_fleet_content(){
             case MISSIONS.station:
                 //get data from the only event
                 if(returning != "true"){
-                    reserve = getChildByClass(fleet,"icon_movement");
+                   // reserve = getChildByClass(fleet,"icon_movement_reserve");
+                    reserve = fleet.getElementsByClassName("icon_movement")[0]
                 }
                 break;
             case MISSIONS.expedition:
@@ -903,19 +912,20 @@ function get_fleet_content(){
             case MISSIONS.recycle:
                 //get data from return of the fleet
                 if(returning == "true")
-                    reserve = getChildByClass(fleet,"icon_movement_reserve");
+               //     reserve = getChildByClass(fleet,"icon_movement_reserve");
+                    reserve = fleet.getElementsByClassName("icon_movement_reserve")[0]
                 break;
         }
         if(reserve == null)
             continue;
         // Some ugly process of the pop-up
         // which is a HTML as text
-        var pop = getChildByClass(reserve,"tooltip").title;
+        var pop = reserve.getElementsByClassName("tooltip")[0].getAttribute("data-tooltip-title");
         if(pop.includes("Métal")){
             var values = pop.split('class="value">')
-            metal += parse_value_from_fleet(values[values.length-3])
-            cristal += parse_value_from_fleet(values[values.length-2])
-            deut += parse_value_from_fleet(values[values.length-1])
+            metal += parse_value_from_fleet(values[values.length-4])
+            cristal += parse_value_from_fleet(values[values.length-3])
+            deut += parse_value_from_fleet(values[values.length-2])
         }
     }
     var fleet_content = {}
@@ -1027,9 +1037,4 @@ function parse_value_from_fleet(text){
     if(text == undefined)
         return 0;
     return parseInt(text.split("<")[0].replaceAll(".",""));
-}
-
-
-function test(){
-    return;
 }
